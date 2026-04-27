@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CPL/CD 测试预约系统（云端同步版）</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
     <style>
@@ -196,251 +195,229 @@
         </div>
     </div>
 
-    <script>
-        // ====================== 云端数据库配置 ======================
-        const firebaseConfig = {
-            apiKey: "AIzaSyD7RzHtQH4l4Y4c4Z3Q4l4X4x4w4v4u4t4s4r4q4p4o4n4m4l4k4j4i4h4g4f4e4d4c4b4a4",
-            authDomain: "booking-system-123.firebaseapp.com",
-            databaseURL: "https://booking-system-123-default-rtdb.firebaseio.com",
-            projectId: "booking-system-123",
-            storageBucket: "booking-system-123.appspot.com",
-            messagingSenderId: "123456789012",
-            appId: "1:123456789012:web:abcdef1234567890abcdef"
-        };
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA6ZgJZJZJZJZJZJZJZJZJZJZJZJZJZJZJZ",
+  authDomain: "sync-booking-123.firebaseapp.com",
+  databaseURL: "https://sync-booking-123-default-rtdb.firebaseio.com",
+  projectId: "sync-booking-123",
+  storageBucket: "sync-booking-123.appspot.com",
+  messagingSenderId: "791656516252",
+  appId: "1:791656516252:web:3c3b3a3d3c3b3a3d3c3b3a"
+};
 
-        // 初始化 Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
-        // 当前系统
-        let currentSystem = 'cpl';
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById("date-picker").value = today;
-        document.getElementById("stat-start-date").value = today;
-        document.getElementById("stat-end-date").value = today;
+let currentSystem = 'cpl';
+const today = new Date().toISOString().split('T')[0];
+document.getElementById("date-picker").value = today;
+document.getElementById("stat-start-date").value = today;
+document.getElementById("stat-end-date").value = today;
 
-        window.onload = function() {
-            generateTimeTicks();
-            listenBookings(); // 实时监听云端数据
-            refreshStatistics();
-            document.getElementById("date-picker").addEventListener("change", listenBookings);
-        };
+window.onload = function () {
+  generateTimeTicks();
+  listenBookings();
+  refreshStatistics();
+  document.getElementById("date-picker").addEventListener("change", listenBookings);
+};
 
-        // 切换系统
-        function switchSystem(system) {
-            currentSystem = system;
-            document.querySelectorAll('.system-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            document.getElementById('system-title').textContent = `${system.toUpperCase()}测试预约系统（云端同步）`;
-            listenBookings();
-            refreshStatistics();
-            document.getElementById('message').innerHTML = '';
-        }
+function switchSystem(system) {
+  currentSystem = system;
+  document.querySelectorAll('.system-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('system-title').textContent = `${system.toUpperCase()}测试预约系统（云端同步）`;
+  listenBookings();
+  refreshStatistics();
+  document.getElementById('message').innerHTML = '';
+}
 
-        // 生成时间刻度
-        function generateTimeTicks() {
-            const ticksContainer = document.getElementById("time-ticks");
-            let html = "";
-            for (let i = 0; i <= 24; i++) {
-                html += `<div>${i.toString().padStart(2, '0')}:00</div>`;
-            }
-            ticksContainer.innerHTML = html;
-        }
+function generateTimeTicks() {
+  const ticksContainer = document.getElementById("time-ticks");
+  let html = "";
+  for (let i = 0; i <= 24; i++) {
+    html += `<div>${i.toString().padStart(2, '0')}:00</div>`;
+  }
+  ticksContainer.innerHTML = html;
+}
 
-        // 时间格式化
-        function formatTime(h, m, s) {
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
+function formatTime(h, m, s) {
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
-        function formatSecondsToHMS(seconds) {
-            const h = Math.floor(seconds / 3600);
-            const m = Math.floor((seconds % 3600) / 60);
-            const s = seconds % 60;
-            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-        }
+function formatSecondsToHMS(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
 
-        // ====================== 云端实时同步核心 ======================
-        function listenBookings() {
-            const date = document.getElementById("date-picker").value;
-            const path = `${currentSystem}/${date}`;
+function listenBookings() {
+  const date = document.getElementById("date-picker").value;
+  const path = `${currentSystem}/${date}`;
+  db.ref(path).on('value', (snapshot) => {
+    renderBookings(snapshot.val() || {});
+  });
+}
 
-            db.ref(path).on('value', (snapshot) => {
-                const data = snapshot.val() || {};
-                renderBookings(data);
-                refreshStatistics();
-            });
-        }
+function renderBookings(bookings) {
+  const timeBar = document.getElementById("time-bar");
+  const list = document.getElementById("booked-list");
+  timeBar.innerHTML = "";
+  list.innerHTML = "";
 
-        // 渲染预约数据
-        function renderBookings(dateBookings) {
-            const timeBar = document.getElementById("time-bar");
-            const bookedList = document.getElementById("booked-list");
-            timeBar.innerHTML = "";
-            bookedList.innerHTML = "";
+  const keys = Object.keys(bookings);
+  if (keys.length === 0) {
+    list.innerHTML = `<div class="text-muted text-center">暂无预约</div>`;
+    return;
+  }
 
-            const keys = Object.keys(dateBookings);
-            if (keys.length === 0) {
-                bookedList.innerHTML = '<div class="text-muted text-center">当前日期暂无预约</div>';
-                return;
-            }
+  let html = "";
+  keys.forEach(key => {
+    const person = bookings[key];
+    const [start, end] = key.split("-");
+    const [sH, sM, sS] = start.split(":").map(Number);
+    const [eH, eM, eS] = end.split(":").map(Number);
+    const dur = formatSecondsToHMS((eH*3600+eM*60+eS)-(sH*3600+sM*60+sS));
 
-            let listHtml = "";
-            keys.forEach(key => {
-                const person = dateBookings[key];
-                const [start, end] = key.split("-");
-                const [sH, sM, sS] = start.split(":").map(Number);
-                const [eH, eM, eS] = end.split(":").map(Number);
-                const dur = formatSecondsToHMS((eH*3600+eM*60+eS)-(sH*3600+sM*60+sS));
+    html += `
+    <div class="booked-item">
+      <div>${document.getElementById("date-picker").value} | ${start} ~ ${end} | ${person} | 时长：${dur}</div>
+      <button class="btn btn-sm btn-danger" onclick="cancelSlot('${key}')">取消</button>
+    </div>`;
 
-                listHtml += `
-                <div class="booked-item">
-                    <div>${document.getElementById("date-picker").value} | ${start}-${end} | ${person} | 时长：${dur}</div>
-                    <button class="btn btn-sm btn-danger" onclick="cancelSlot('${key}')">取消</button>
-                </div>`;
+    const left = ( (sH*3600+sM*60+sS) / 86400 ) * 100;
+    const width = ( (eH*3600+eM*60+eS - sH*3600-sM*60-sS) / 86400 ) * 100;
+    const block = document.createElement("div");
+    block.className = "booked-block";
+    block.style.left = left + "%";
+    block.style.width = width + "%";
+    block.innerText = `${start}-${end} ${person}`;
+    timeBar.appendChild(block);
+  });
+  list.innerHTML = html;
+}
 
-                const startSec = sH*3600+sM*60+sS;
-                const endSec = eH*3600+eM*60+eS;
-                const left = (startSec / 86400) * 100;
-                const width = ((endSec - startSec) / 86400) * 100;
+async function bookSlot() {
+  const date = document.getElementById("date-picker").value;
+  const sH = +document.getElementById("start-hour").value || 0;
+  const sM = +document.getElementById("start-min").value || 0;
+  const sS = +document.getElementById("start-sec").value || 0;
+  const eH = +document.getElementById("end-hour").value || 0;
+  const eM = +document.getElementById("end-min").value || 0;
+  const eS = +document.getElementById("end-sec").value || 0;
+  const person = document.getElementById("person-name").value.trim();
 
-                const block = document.createElement("div");
-                block.className = "booked-block";
-                block.style.left = left + "%";
-                block.style.width = width + "%";
-                block.innerText = `${start}-${end} ${person}`;
-                timeBar.appendChild(block);
-            });
+  if (!date || !person) {
+    showMessage("请填写日期和姓名", "warning");
+    return;
+  }
 
-            bookedList.innerHTML = listHtml;
-        }
+  const start = formatTime(sH, sM, sS);
+  const end = formatTime(eH, eM, eS);
+  const startSec = sH*3600+sM*60+sS;
+  const endSec = eH*3600+eM*60+eS;
 
-        // 预约（保存到云端）
-        async function bookSlot() {
-            const date = document.getElementById("date-picker").value;
-            const sH = +document.getElementById("start-hour").value || 0;
-            const sM = +document.getElementById("start-min").value || 0;
-            const sS = +document.getElementById("start-sec").value || 0;
-            const eH = +document.getElementById("end-hour").value || 0;
-            const eM = +document.getElementById("end-min").value || 0;
-            const eS = +document.getElementById("end-sec").value || 0;
-            const person = document.getElementById("person-name").value.trim();
+  if (startSec >= endSec) {
+    showMessage("结束时间必须大于开始时间", "danger");
+    return;
+  }
 
-            if (!date || !person) {
-                showMessage("请填写完整信息", "warning");
-                return;
-            }
+  const snap = await db.ref(`${currentSystem}/${date}`).get();
+  const data = snap.val() || {};
 
-            const start = formatTime(sH, sM, sS);
-            const end = formatTime(eH, eM, eS);
-            const startSec = sH*3600+sM*60+sS;
-            const endSec = eH*3600+eM*60+eS;
+  for (const k in data) {
+    const [s, e] = k.split("-");
+    const [sh, sm, ss] = s.split(":").map(Number);
+    const [eh, em, es] = e.split(":").map(Number);
+    const ts = sh*3600+sm*60+ss;
+    const te = eh*3600+em*60+es;
+    if (!(endSec <= ts || startSec >= te)) {
+      showMessage("时段冲突！", "danger");
+      return;
+    }
+  }
 
-            if (startSec >= endSec) {
-                showMessage("结束时间必须晚于开始时间", "danger");
-                return;
-            }
+  await db.ref(`${currentSystem}/${date}/${start}-${end}`).set(person);
+  showMessage("预约成功！已同步云端", "success");
+  resetInput();
+}
 
-            const snapshot = await db.ref(`${currentSystem}/${date}`).get();
-            const data = snapshot.val() || {};
+async function cancelSlot(key) {
+  if (!confirm("确定取消？")) return;
+  const date = document.getElementById("date-picker").value;
+  await db.ref(`${currentSystem}/${date}/${key}`).remove();
+  showMessage("已取消", "success");
+}
 
-            for (const key in data) {
-                const [s, e] = key.split("-");
-                const [sh, sm, ss] = s.split(":").map(Number);
-                const [eh, em, es] = e.split(":").map(Number);
-                const ts = sh*3600+sm*60+ss;
-                const te = eh*3600+em*60+es;
-                if (!(endSec <= ts || startSec >= te)) {
-                    showMessage(`时段冲突：${s}-${e}`, "danger");
-                    return;
-                }
-            }
+function resetInput() {
+  document.getElementById("start-hour").value = 0;
+  document.getElementById("start-min").value = 0;
+  document.getElementById("start-sec").value = 0;
+  document.getElementById("end-hour").value = 1;
+  document.getElementById("end-min").value = 0;
+  document.getElementById("end-sec").value = 0;
+  document.getElementById("person-name").value = "";
+}
 
-            await db.ref(`${currentSystem}/${date}/${start}-${end}`).set(person);
-            showMessage("预约成功（已同步云端）", "success");
-            resetInput();
-        }
+function showMessage(text, type) {
+  const m = document.getElementById("message");
+  m.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+  setTimeout(() => m.innerHTML = "", 2500);
+}
 
-        // 取消预约（云端同步）
-        async function cancelSlot(key) {
-            if (!confirm("确定取消？")) return;
-            const date = document.getElementById("date-picker").value;
-            await db.ref(`${currentSystem}/${date}/${key}`).remove();
-            showMessage("已取消（已同步云端）", "success");
-        }
+async function calculateStatistics(startDate, endDate) {
+  const snap = await db.ref(currentSystem).get();
+  const all = snap.val() || {};
+  const stats = {};
+  let total = 0;
 
-        // 重置输入
-        function resetInput() {
-            document.getElementById("start-hour").value = 0;
-            document.getElementById("start-min").value = 0;
-            document.getElementById("start-sec").value = 0;
-            document.getElementById("end-hour").value = 1;
-            document.getElementById("end-min").value = 0;
-            document.getElementById("end-sec").value = 0;
-            document.getElementById("person-name").value = "";
-        }
+  for (const date in all) {
+    if (startDate && endDate && (date < startDate || date > endDate)) continue;
+    const day = all[date];
+    for (const key in day) {
+      const p = day[key];
+      const [s, e] = key.split("-");
+      const [sh, sm, ss] = s.split(":").map(Number);
+      const [eh, em, es] = e.split(":").map(Number);
+      const d = (eh*3600+em*60+es) - (sh*3600+sm*60+ss);
+      stats[p] = (stats[p] || 0) + d;
+      total += d;
+    }
+  }
+  return { stats, total };
+}
 
-        // 提示消息
-        function showMessage(text, type) {
-            const msg = document.getElementById("message");
-            msg.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
-            setTimeout(() => msg.innerHTML = "", 3000);
-        }
+async function refreshStatistics() {
+  const res = await calculateStatistics();
+  renderStats(res);
+}
 
-        // 统计（云端）
-        async function calculateStatistics(startDate, endDate) {
-            const snapshot = await db.ref(currentSystem).get();
-            const allData = snapshot.val() || {};
-            const stats = {};
-            let total = 0;
+async function filterStatistics() {
+  const s = document.getElementById("stat-start-date").value;
+  const e = document.getElementById("stat-end-date").value;
+  if (!s || !e || s > e) {
+    showMessage("日期范围错误", "warning");
+    return;
+  }
+  const res = await calculateStatistics(s, e);
+  renderStats(res);
+}
 
-            for (const date in allData) {
-                if (startDate && endDate && (date < startDate || date > endDate)) continue;
-                const dayData = allData[date];
-                for (const key in dayData) {
-                    const p = dayData[key];
-                    const [s, e] = key.split("-");
-                    const [sh, sm, ss] = s.split(":").map(Number);
-                    const [eh, em, es] = e.split(":").map(Number);
-                    const d = (eh*3600+em*60+es) - (sh*3600+sm*60+ss);
-                    stats[p] = (stats[p] || 0) + d;
-                    total += d;
-                }
-            }
-
-            return { stats, total };
-        }
-
-        async function refreshStatistics() {
-            const res = await calculateStatistics();
-            renderStats(res);
-        }
-
-        async function filterStatistics() {
-            const s = document.getElementById("stat-start-date").value;
-            const e = document.getElementById("stat-end-date").value;
-            if (!s || !e || s > e) {
-                showMessage("日期范围错误", "warning");
-                return;
-            }
-            const res = await calculateStatistics(s, e);
-            renderStats(res);
-        }
-
-        function renderStats({ stats, total }) {
-            const list = document.getElementById("statistics-list");
-            const keys = Object.keys(stats);
-            if (keys.length === 0) {
-                list.innerHTML = '<div class="text-muted text-center">暂无统计数据</div>';
-                return;
-            }
-
-            let html = "";
-            keys.forEach(k => {
-                html += `<div class="stat-item"><div><strong>${k}</strong><div class="duration-label">总时长</div></div><div>${formatSecondsToHMS(stats[k])}</div></div>`;
-            });
-            html += `<div class="stat-item stat-total"><div><strong>总计</strong></div><div>${formatSecondsToHMS(total)}</div></div>`;
-            list.innerHTML = html;
-        }
-    </script>
+function renderStats({ stats, total }) {
+  const list = document.getElementById("statistics-list");
+  const keys = Object.keys(stats);
+  if (keys.length === 0) {
+    list.innerHTML = `<div class="text-muted text-center">暂无统计</div>`;
+    return;
+  }
+  let html = "";
+  keys.forEach(k => {
+    html += `<div class="stat-item"><div><strong>${k}</strong><div class="duration-label">总使用时长</div></div><div>${formatSecondsToHMS(stats[k])}</div></div>`;
+  });
+  html += `<div class="stat-item stat-total"><div><strong>总计</strong></div><div>${formatSecondsToHMS(total)}</div></div>`;
+  list.innerHTML = html;
+}
+</script>
 </body>
 </html>
